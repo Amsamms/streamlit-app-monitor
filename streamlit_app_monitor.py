@@ -39,6 +39,9 @@ class StreamlitAppMonitor:
         chrome_driver_path = os.getenv('CHROME_DRIVER_PATH', '/usr/local/bin/chromedriver')
         self.service = Service(chrome_driver_path)
         
+        # Set Chromium binary path
+        self.chrome_options.binary_location = "/snap/bin/chromium"
+        
     def get_urls(self):
         """Get URLs from environment variable or use default list"""
         urls_str = os.getenv('STREAMLIT_URLS')
