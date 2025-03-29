@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
+import os
 
 def log_status(url: str, status: str):
     """Log only the essential information: timestamp, URL, and status."""
@@ -55,8 +56,13 @@ class StreamlitAppMonitor:
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-infobars")
+            chrome_options.add_argument("--remote-debugging-port=9222")
             chrome_options.add_argument("window-size=1920x1080")
-            service = ChromeService(ChromeDriverManager().install())
+            
+            # Use ChromeDriverManager with specific version for stability
+            service = ChromeService(ChromeDriverManager(version="114.0.5735.90").install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             driver.get(url)
@@ -116,22 +122,27 @@ class StreamlitAppMonitor:
             log_status(result['url'], result['status'])
 
 def main():
-    urls = [
-        "https://amsamms-scatter-plotter-scatter-plotter-f4ojyj.streamlit.app/",
-        "https://amsamms-general-machine-learning-algorithm-main-rs6nt9.streamlit.app/",
-        "https://datasetanalysis-0.streamlit.app/",
-        "https://pdf-table-extract.streamlit.app/",
-        "https://images-table-extractor.streamlit.app/",
-        "https://unit-converter-engineering.streamlit.app/",
-        "https://gas-density-calculator-r.streamlit.app/",
-        "https://envelopplotter.streamlit.app/",
-        "https://liquid-control-valves-eval.streamlit.app/",
-        "https://gas-control-valves-evaluation.streamlit.app/",
-        "https://sabri-gpt-chatbot.streamlit.app/",
-        "https://assistant-api-sabri.streamlit.app/",
-        "https://movie-retriever.streamlit.app/",
-        "https://h2-prediction.streamlit.app/"
-    ]
+    # Get URLs from environment variable or use default list
+    urls_str = os.getenv('STREAMLIT_URLS')
+    if urls_str:
+        urls = [url.strip() for url in urls_str.split(',') if url.strip()]
+    else:
+        urls = [
+            "https://amsamms-scatter-plotter-scatter-plotter-f4ojyj.streamlit.app/",
+            "https://amsamms-general-machine-learning-algorithm-main-rs6nt9.streamlit.app/",
+            "https://datasetanalysis-0.streamlit.app/",
+            "https://pdf-table-extract.streamlit.app/",
+            "https://images-table-extractor.streamlit.app/",
+            "https://unit-converter-engineering.streamlit.app/",
+            "https://gas-density-calculator-r.streamlit.app/",
+            "https://envelopplotter.streamlit.app/",
+            "https://liquid-control-valves-eval.streamlit.app/",
+            "https://gas-control-valves-evaluation.streamlit.app/",
+            "https://sabri-gpt-chatbot.streamlit.app/",
+            "https://assistant-api-sabri.streamlit.app/",
+            "https://movie-retriever.streamlit.app/",
+            "https://h2-prediction.streamlit.app/"
+        ]
 
     monitor = StreamlitAppMonitor(urls)
     try:
