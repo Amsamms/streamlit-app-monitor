@@ -17,10 +17,16 @@ jobs:
       with:
         python-version: '3.12'
     
-    - name: Install Chrome
+    - name: Install Chrome and ChromeDriver
       run: |
         sudo apt-get update
         sudo apt-get install -y chromium-browser
+        CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+        wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
     
     - name: Install dependencies
       run: |
@@ -31,6 +37,7 @@ jobs:
       run: python streamlit_app_monitor.py
       env:
         PYTHONUNBUFFERED: 1
+        CHROME_DRIVER_PATH: /usr/local/bin/chromedriver
       continue-on-error: true  # Continue even if some apps fail
     
     - name: Upload log file

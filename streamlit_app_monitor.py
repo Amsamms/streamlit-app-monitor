@@ -9,7 +9,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Configure logging
 logging.basicConfig(
@@ -36,8 +35,9 @@ class StreamlitAppMonitor:
         self.chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # Use the latest ChromeDriver version
-        self.service = Service(ChromeDriverManager().install())
+        # Use ChromeDriver from system path
+        chrome_driver_path = os.getenv('CHROME_DRIVER_PATH', '/usr/local/bin/chromedriver')
+        self.service = Service(chrome_driver_path)
         
     def get_urls(self):
         """Get URLs from environment variable or use default list"""
