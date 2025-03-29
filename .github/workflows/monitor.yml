@@ -17,11 +17,11 @@ jobs:
       with:
         python-version: '3.12'
     
-    - name: Install Chrome and ChromeDriver
+    - name: Install Chromium and ChromeDriver
       run: |
         sudo apt-get update
         sudo apt-get install -y chromium-browser
-        CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
+        CHROME_VERSION=$(chromium-browser --version | cut -d ' ' -f 2 | cut -d '.' -f 1)
         CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
         wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
         unzip chromedriver_linux64.zip
