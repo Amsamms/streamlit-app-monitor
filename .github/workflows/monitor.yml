@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
     
@@ -31,9 +31,11 @@ jobs:
       run: python streamlit_app_monitor.py
       env:
         PYTHONUNBUFFERED: 1
+      continue-on-error: true  # Continue even if some apps fail
     
     - name: Upload log file
-      uses: actions/upload-artifact@v3
+      if: always()  # Run this step even if previous steps failed
+      uses: actions/upload-artifact@v4
       with:
         name: monitor-log
         path: streamlit_monitor.log
