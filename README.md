@@ -1,21 +1,21 @@
 # Streamlit App Monitor
 
-A Python script to monitor and automatically wake up sleeping Streamlit apps deployed on Streamlit Community Cloud.
+A Python script to monitor the status of Streamlit applications and detect when they go to sleep.
 
 ## Features
 
-- Monitors multiple Streamlit apps simultaneously
-- Automatically detects sleeping apps
+- Monitors multiple Streamlit apps concurrently
+- Detects when apps are sleeping
 - Attempts to wake up sleeping apps
-- Tracks health status and wake-up attempts
-- Detailed logging of app status and response times
-- Concurrent monitoring with configurable intervals
+- Logs status and errors
+- Runs via GitHub Actions every 11 hours
 
 ## Requirements
 
-- Python 3.6+
-- requests
-- beautifulsoup4
+- Python 3.12+
+- Chrome/Chromium browser
+- Selenium WebDriver
+- Required Python packages (see requirements.txt)
 
 ## Installation
 
@@ -32,35 +32,48 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Edit the `urls` list in `main()` to include your Streamlit app URLs.
+The script can be run in two ways:
 
-2. Run the script:
+1. **Manual Run**:
 ```bash
 python streamlit_app_monitor.py
 ```
 
-The script will:
-- Monitor all specified apps every 5 minutes
-- Attempt to wake up any sleeping apps
-- Log all activities to `streamlit_monitor.log`
-- Display real-time status in the console
+2. **GitHub Actions**:
+- The script runs automatically every 11 hours via GitHub Actions
+- You can also trigger manual runs from the Actions tab
+- Logs are saved as artifacts in each run
 
 ## Configuration
 
-You can modify these parameters in the `StreamlitAppMonitor` class:
-- `max_retries`: Number of retry attempts (default: 3)
-- `retry_delay`: Delay between retries in seconds (default: 5)
-- `wake_up_wait`: Wait time after wake-up attempt in seconds (default: 120)
-- Monitoring interval: Time between monitoring cycles (default: 300 seconds)
+The list of URLs to monitor can be configured in two ways:
+
+1. **Environment Variable**:
+```bash
+export STREAMLIT_URLS="https://app1.streamlit.app,https://app2.streamlit.app"
+```
+
+2. **Default List**:
+If no environment variable is set, the script uses a default list of URLs.
 
 ## Logging
 
-The script creates a `streamlit_monitor.log` file that contains:
-- Health status for each app
-- Wake-up attempts and results
-- Response times
-- Error messages
-- Timestamps for all events
+The script logs:
+- App status (active/inactive)
+- Sleep detection
+- Wake-up attempts
+- Errors and exceptions
+
+Logs are saved to `streamlit_monitor.log` and are available as artifacts in GitHub Actions runs.
+
+## GitHub Actions
+
+The workflow:
+1. Runs every 11 hours
+2. Sets up Python and Chrome
+3. Installs dependencies
+4. Runs the monitor script
+5. Saves logs as artifacts
 
 ## License
 
