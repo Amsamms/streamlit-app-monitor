@@ -1,133 +1,52 @@
+import logging
+import os
 import time
-from datetime import datetime
-from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
-import os
 
-def log_status(url: str, status: str):
-    """Log only the essential information: timestamp, URL, and status."""
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with open('streamlit_monitor.log', 'a') as f:
-        f.write(f"{timestamp} | {url} | {status}\n")
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('streamlit_monitor.log'),
+        logging.StreamHandler()
+    ]
+)
 
 class StreamlitAppMonitor:
-    def __init__(self, urls: List[str]):
-        self.urls = urls
-        self.wake_up_wait = 120  # 2 minutes wait after wake-up attempt
-
-    def is_sleeping(self, driver) -> bool:
-        """Check if the app is in sleeping state using Selenium."""
-        try:
-            wake_up_button_xpath = "//button[contains(., 'get this app back up')]"
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, wake_up_button_xpath))
-            )
-            return True
-        except TimeoutException:
-            return False
-        except Exception:
-            return False
-
-    def wake_up_app(self, url: str, driver) -> bool:
-        """Attempt to wake up a sleeping app using Selenium."""
-        try:
-            wake_up_button_xpath = "//button[contains(., 'get this app back up')]"
-            wake_up_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, wake_up_button_xpath))
-            )
-            wake_up_button.click()
-            time.sleep(self.wake_up_wait)  # Wait for app to wake up
-            return True
-        except Exception:
-            return False
-
-    def check_app_status(self, url: str) -> Dict:
-        driver = None
-        try:
-            chrome_options = ChromeOptions()
-            chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-extensions")
-            chrome_options.add_argument("--disable-infobars")
-            chrome_options.add_argument("--remote-debugging-port=9222")
-            chrome_options.add_argument("window-size=1920x1080")
-            
-            # Use ChromeDriverManager with specific version for stability
-            service = ChromeService(ChromeDriverManager(version="114.0.5735.90").install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            
-            driver.get(url)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            
-            is_sleeping = self.is_sleeping(driver)
-            
-            if is_sleeping:
-                if self.wake_up_app(url, driver):
-                    return {
-                        'url': url,
-                        'status': 'ACTIVATED',
-                        'details': 'App was sleeping and has been activated'
-                    }
-                else:
-                    return {
-                        'url': url,
-                        'status': 'ERROR',
-                        'details': 'Failed to wake up sleeping app'
-                    }
-            else:
-                return {
-                    'url': url,
-                    'status': 'ACTIVE',
-                    'details': 'App is already active'
-                }
-                
-        except Exception as e:
-            return {
-                'url': url,
-                'status': 'ERROR',
-                'details': f'Error: {str(e)}'
-            }
-        finally:
-            if driver:
-                driver.quit()
-
-    def monitor_apps(self):
-        print(f"\nChecking apps at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print("="*50)
+    def __init__(self):
+        self.chrome_options = Options()
+        self.chrome_options.add_argument("--headless")
+        self.chrome_options.add_argument("--no-sandbox")
+        self.chrome_options.add_argument("--disable-dev-shm-usage")
+        self.chrome_options.add_argument("--disable-gpu")
+        self.chrome_options.add_argument("--disable-extensions")
+        self.chrome_options.add_argument("--disable-infobars")
+        self.chrome_options.add_argument("--disable-notifications")
+        self.chrome_options.add_argument("--disable-popup-blocking")
+        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        self.chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        self.chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        for url in self.urls:
-            result = self.check_app_status(url)
-            status_emoji = {
-                'ACTIVE': '✅',
-                'ACTIVATED': '🔄',
-                'ERROR': '❌'
-            }
-            print(f"{status_emoji.get(result['status'], '❓')} {url}")
-            print(f"   Status: {result['status']}")
-            print(f"   Details: {result['details']}")
-            print("-"*50)
-            
-            # Log only essential information
-            log_status(result['url'], result['status'])
-
-def main():
-    # Get URLs from environment variable or use default list
-    urls_str = os.getenv('STREAMLIT_URLS')
-    if urls_str:
-        urls = [url.strip() for url in urls_str.split(',') if url.strip()]
-    else:
-        urls = [
+        # Use the latest ChromeDriver version
+        self.service = Service(ChromeDriverManager().install())
+        
+    def get_urls(self):
+        """Get URLs from environment variable or use default list"""
+        urls_str = os.getenv('STREAMLIT_URLS')
+        if urls_str:
+            return [url.strip() for url in urls_str.split(',')]
+        
+        # Default list of URLs to monitor
+        return [
             "https://amsamms-scatter-plotter-scatter-plotter-f4ojyj.streamlit.app/",
             "https://amsamms-general-machine-learning-algorithm-main-rs6nt9.streamlit.app/",
             "https://datasetanalysis-0.streamlit.app/",
@@ -144,13 +63,80 @@ def main():
             "https://h2-prediction.streamlit.app/"
         ]
 
-    monitor = StreamlitAppMonitor(urls)
-    try:
-        monitor.monitor_apps()
-    except KeyboardInterrupt:
-        print("\nMonitoring stopped by user")
-    except Exception as e:
-        print(f"\nAn error occurred: {str(e)}")
+    def is_sleeping(self, driver):
+        """Check if the app is sleeping by looking for the wake-up button"""
+        try:
+            # Wait for potential wake-up button with various selectors
+            wake_up_button = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, 
+                    "//button[contains(text(), 'Wake up') or contains(text(), 'wake up') or contains(text(), 'Wake Up') or contains(text(), 'WAKE UP')]"
+                ))
+            )
+            return True
+        except TimeoutException:
+            return False
+
+    def wake_up_app(self, driver):
+        """Attempt to wake up the app by clicking the wake-up button"""
+        try:
+            # Wait for wake-up button to be clickable
+            wake_up_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, 
+                    "//button[contains(text(), 'Wake up') or contains(text(), 'wake up') or contains(text(), 'Wake Up') or contains(text(), 'WAKE UP')]"
+                ))
+            )
+            wake_up_button.click()
+            time.sleep(5)  # Wait for wake-up process
+            return True
+        except Exception as e:
+            logging.error(f"Failed to wake up app: {str(e)}")
+            return False
+
+    def check_app_status(self, url):
+        """Check the status of a single Streamlit app"""
+        driver = None
+        try:
+            driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
+            driver.get(url)
+            
+            # Wait for the main Streamlit app to load
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "stApp"))
+            )
+            
+            # Check if app is sleeping
+            if self.is_sleeping(driver):
+                logging.info(f"App is sleeping: {url}")
+                if self.wake_up_app(driver):
+                    logging.info(f"Successfully woke up app: {url}")
+                else:
+                    logging.error(f"Failed to wake up app: {url}")
+            else:
+                logging.info(f"App is active: {url}")
+                
+        except TimeoutException:
+            logging.error(f"Timeout while checking app: {url}")
+        except WebDriverException as e:
+            logging.error(f"Error checking app {url}: {str(e)}")
+        except Exception as e:
+            logging.error(f"Unexpected error checking app {url}: {str(e)}")
+        finally:
+            if driver:
+                driver.quit()
+
+    def monitor_apps(self):
+        """Monitor all Streamlit apps concurrently"""
+        urls = self.get_urls()
+        logging.info(f"Starting monitoring of {len(urls)} apps")
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            executor.map(self.check_app_status, urls)
+        
+        logging.info("Monitoring completed")
+
+def main():
+    monitor = StreamlitAppMonitor()
+    monitor.monitor_apps()
 
 if __name__ == "__main__":
     main() 
