@@ -130,7 +130,8 @@ def main():
         "https://sabri-gpt-chatbot.streamlit.app/",
         "https://assistant-api-sabri.streamlit.app/",
         "https://movie-retriever.streamlit.app/",
-        "https://h2-prediction.streamlit.app/"
+        "https://h2-prediction.streamlit.app/",
+        "https://ai-league.streamlit.app/"
     ]
 
     monitor = StreamlitAppMonitor(urls)
